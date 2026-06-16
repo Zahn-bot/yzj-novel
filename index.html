@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>异世界物理法则 · 暗黑版</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --bg2: #141414;
+    --bg3: #1a1a1a;
+    --fg: #d4d4d4;
+    --fg2: #888;
+    --accent: #c9a84c;
+    --accent-dim: #8a7a3a;
+    --border: #222;
+    --font: "Noto Serif SC", "Source Han Serif SC", "STSong", serif;
+    --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font);
+    line-height: 1.9;
+    font-size: 16px;
+  }
+
+  /* ---- layout ---- */
+  #app {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---- sidebar ---- */
+  #sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    padding: 24px 0;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .sidebar-title {
+    padding: 0 20px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .sidebar-title small {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--fg2);
+    margin-top: 4px;
+    letter-spacing: 0;
+  }
+
+  .chapter-list { list-style: none; }
+  .chapter-list li { }
+  .chapter-list a {
+    display: block;
+    padding: 8px 20px;
+    color: var(--fg2);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    font-family: var(--font-mono);
+  }
+  .chapter-list a:hover {
+    color: var(--fg);
+    background: rgba(255,255,255,0.03);
+  }
+  .chapter-list a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(201,168,76,0.06);
+  }
+  .chapter-list .section-label {
+    padding: 16px 20px 4px;
+    font-size: 10px;
+    color: var(--fg2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  /* ---- main content ---- */
+  #content {
+    flex: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 40px 80px;
+  }
+
+  /* ---- markdown rendered ---- */
+  #content h1 {
+    font-size: 28px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  #content h2 {
+    font-size: 20px;
+    color: var(--accent-dim);
+    margin: 40px 0 16px;
+    font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  #content h3 {
+    font-size: 17px;
+    color: var(--fg);
+    margin: 32px 0 12px;
+    font-weight: 600;
+  }
+  #content p {
+    margin-bottom: 16px;
+    text-indent: 2em;
+  }
+  #content p:first-of-type { text-indent: 0; }
+  #content p:empty { display: none; }
+  #content strong { color: var(--accent); font-weight: 600; }
+  #content em { color: var(--fg2); }
+  #content blockquote {
+    border-left: 3px solid var(--accent-dim);
+    padding: 12px 20px;
+    margin: 20px 0;
+    background: rgba(201,168,76,0.04);
+    color: var(--fg2);
+    font-style: italic;
+  }
+  #content blockquote p { text-indent: 0; }
+  #content code {
+    font-family: var(--font-mono);
+    background: var(--bg3);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  #content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+  #content img { max-width: 100%; border-radius: 4px; }
+  #content ul, #content ol {
+    margin: 12px 0 16px 2em;
+  }
+  #content li { margin-bottom: 6px; }
+
+  /* ---- loading / placeholders ---- */
+  #placeholder {
+    text-align: center;
+    padding: 120px 0;
+    color: var(--fg2);
+  }
+  #placeholder h2 {
+    font-size: 22px;
+    color: var(--accent-dim);
+    border: none;
+    margin-bottom: 12px;
+  }
+  #placeholder p { text-indent: 0; font-size: 14px; }
+
+  /* ---- mobile toggle ---- */
+  #sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 768px) {
+    #sidebar-toggle { display: flex; }
+    #sidebar {
+      position: fixed;
+      left: -300px;
+      top: 0;
+      z-index: 99;
+      transition: left 0.25s;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+    }
+    #sidebar.open { left: 0; }
+    #content {
+      padding: 40px 20px 60px;
+      max-width: 100%;
+    }
+    #content h1 { font-size: 22px; }
+    #content h2 { font-size: 17px; }
+    #content p { font-size: 15px; }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 98;
+    }
+    .sidebar-overlay.show { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <button id="sidebar-toggle">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <nav id="sidebar">
+    <div class="sidebar-title">
+      异世界物理法则
+      <small>暗黑版 · 改写中</small>
+    </div>
+    <ul class="chapter-list" id="chapter-list"></ul>
+  </nav>
+
+  <main id="content">
+    <div id="placeholder">
+      <h2>异世界物理法则 · 暗黑版</h2>
+      <p>选择左侧章节开始阅读</p>
+      <p style="margin-top:24px;font-size:12px;color:#555;">
+        手机端点击左上角 ☰ 打开目录
+      </p>
+    </div>
+  </main>
+</div>
+
+<script>
+const CHAPTERS = [
+  { file: "第一章_见习冒险者.md",       label: "第一章  见习冒险者" },
+  { file: "第二章_灰石镇的地下城.md",   label: "第二章  灰石镇的地下城" },
+  { file: "第三章_矿坑深处.md",         label: "第三章  矿坑深处" },
+  { file: "第四章_炼金术士的遗产.md",   label: "第四章  炼金术士的遗产" },
+  { file: "第五章_艾琳的委托.md",       label: "第五章  艾琳的委托" },
+  { file: "第六章_回路环.md",           label: "第六章  回路环" },
+  { file: "第七章_灰石镇防御战.md",     label: "第七章  灰石镇防御战" },
+  { file: "第八章_龙墓的召唤.md",       label: "第八章  龙墓的召唤" },
+  { file: "第九章_龙巢深处.md",         label: "第九章  龙巢深处" },
+  { file: "第十章_圣堂的阴影.md",       label: "第十章  圣堂的阴影" },
+  { file: "第十一章_银月城的邀请.md",   label: "第十一章  银月城的邀请" },
+  { file: "第十二章_银月城.md",         label: "第十二章  银月城" },
+  { file: "第十三章_旧圣堂的地下.md",   label: "第十三章  旧圣堂的地下" },
+  { file: "第十四章_王都的阴影.md",     label: "第十四章  王都的阴影" },
+  { file: "第十五章_暗流涌动.md",       label: "第十五章  暗流涌动" },
+  { file: "第十六章_圣堂的审判.md",     label: "第十六章  圣堂的审判" },
+  { file: "第十七章_灰石镇的日常.md",   label: "第十七章  灰石镇的日常" },
+  { file: "第十八章_远方的信.md",       label: "第十八章  远方的信" },
+  { file: "第十九章_王都的毒.md",       label: "第十九章  王都的毒" },
+  { file: "第二十章_使馆地下.md",       label: "第二十章  使馆地下" },
+  { file: "第二十一章_灰石镇的春天.md", label: "第二十一章  灰石镇的春天" },
+  { file: "第二十二章_隘口的新兵.md",   label: "第二十二章  隘口的新兵" },
+  { file: "第二十三章_肖恩的课堂.md",   label: "第二十三章  远方的访客" },
+  { file: "第二十四章_银月城的钟声.md", label: "第二十四章  银月城的钟声" },
+  { file: "第二十五章_铜徽的背面.md",   label: "第二十五章  铜徽的背面" },
+];
+
+const EXTRA = [
+  { file: "B方向_暗黑转折_第二十六章_圣堂的铁砧.md", label: "第二十六章  圣堂的铁砧（暗黑转折）", extra: true },
+  { file: "A方向_重启_第零章_观测者苏醒.md",         label: "第零章 · 观测者苏醒（重启线）",     extra: true },
+];
+
+const listEl = document.getElementById("chapter-list");
+const contentEl = document.getElementById("content");
+
+// render sidebar
+function renderSidebar() {
+  let html = '<li class="section-label">主线</li>';
+  CHAPTERS.forEach((ch, i) => {
+    html += `<li><a href="#" data-index="${i}" data-file="${ch.file}" class="ch-link">${ch.label}</a></li>`;
+  });
+  html += '<li class="section-label" style="margin-top:12px;">新方向 · 试写</li>';
+  EXTRA.forEach((ch, i) => {
+    html += `<li><a href="#" data-index="${CHAPTERS.length + i}" data-file="${ch.file}" class="ch-link extra">${ch.label}</a></li>`;
+  });
+  listEl.innerHTML = html;
+}
+
+// load & render chapter
+async function loadChapter(file) {
+  contentEl.innerHTML = '<div id="placeholder"><p style="text-indent:0;">加载中...</p></div>';
+  try {
+    const resp = await fetch(file);
+    if (!resp.ok) throw new Error("Not found: " + file);
+    const md = await resp.text();
+    const html = marked.parse(md);
+    contentEl.innerHTML = html;
+    window.scrollTo({ top: 0 });
+  } catch (e) {
+    contentEl.innerHTML = `<div id="placeholder">
+      <h2>暂未完成</h2>
+      <p>该章节尚未改写，正在路上。</p>
+      <p style="font-size:12px;color:#555;margin-top:16px;">${e.message}</p>
+    </div>`;
+  }
+}
+
+// handle click
+document.addEventListener("click", (e) => {
+  const link = e.target.closest(".ch-link");
+  if (!link) return;
+  e.preventDefault();
+  const file = link.dataset.file;
+  // update active
+  document.querySelectorAll(".ch-link").forEach(el => el.classList.remove("active"));
+  link.classList.add("active");
+  // load
+  loadChapter(file);
+  // close sidebar on mobile
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebar-overlay").classList.remove("show");
+});
+
+// mobile toggle
+document.getElementById("sidebar-toggle").addEventListener("click", () => {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sidebar-overlay").classList.toggle("show");
+});
+document.getElementById("sidebar-overlay").addEventListener("click", () => {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebar-overlay").classList.remove("show");
+});
+
+// init
+renderSidebar();
+</script>
+</body>
+</html>
