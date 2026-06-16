@@ -233,7 +233,7 @@
   <nav id="sidebar">
     <div class="sidebar-title">
       异世界物理法则
-      <small>暗黑版 · 改写中</small>
+      <small>暗黑版 · 全文完</small>
     </div>
     <ul class="chapter-list" id="chapter-list"></ul>
   </nav>
@@ -300,7 +300,7 @@ function renderSidebar() {
 }
 
 // load & render chapter
-async function loadChapter(file) {
+async function loadChapter(file, restoreScrollPos = false) {
   contentEl.innerHTML = '<div id="placeholder"><p style="text-indent:0;">加载中...</p></div>';
   try {
     const resp = await fetch(file);
@@ -308,7 +308,9 @@ async function loadChapter(file) {
     const md = await resp.text();
     const html = marked.parse(md);
     contentEl.innerHTML = html;
-    window.scrollTo({ top: 0 });
+    if (!restoreScrollPos) {
+      window.scrollTo({ top: 0 });
+    }
   } catch (e) {
     contentEl.innerHTML = `<div id="placeholder">
       <h2>暂未完成</h2>
@@ -318,12 +320,55 @@ async function loadChapter(file) {
   }
 }
 
+// ---- reading progress ----
+function saveProgress(file, label) {
+  try {
+    localStorage.setItem("yzj-novel-file", file);
+    localStorage.setItem("yzj-novel-label", label);
+  } catch(e) { /* storage unavailable, ignore */ }
+}
+
+function loadProgress() {
+  try {
+    const file = localStorage.getItem("yzj-novel-file");
+    const label = localStorage.getItem("yzj-novel-label");
+    return file ? { file, label } : null;
+  } catch(e) { return null; }
+}
+
+// save scroll position per chapter (throttled)
+let scrollSaveTimer = null;
+document.addEventListener("scroll", () => {
+  if (scrollSaveTimer) return;
+  scrollSaveTimer = setTimeout(() => {
+    scrollSaveTimer = null;
+    const file = localStorage.getItem("yzj-novel-file");
+    if (!file) return;
+    const pct = window.scrollY / Math.max(document.body.scrollHeight - window.innerHeight, 1);
+    try { localStorage.setItem("yzj-novel-scroll", String(pct)); } catch(e) {}
+  }, 300);
+});
+
+function restoreScroll() {
+  try {
+    const pct = parseFloat(localStorage.getItem("yzj-novel-scroll"));
+    if (isFinite(pct) && pct > 0) {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: pct * (document.body.scrollHeight - window.innerHeight), behavior: "instant" });
+      });
+    }
+  } catch(e) {}
+}
+
 // handle click
 document.addEventListener("click", (e) => {
   const link = e.target.closest(".ch-link");
   if (!link) return;
   e.preventDefault();
   const file = link.dataset.file;
+  const label = link.textContent.trim();
+  // save progress
+  saveProgress(file, label);
   // update active
   document.querySelectorAll(".ch-link").forEach(el => el.classList.remove("active"));
   link.classList.add("active");
@@ -346,6 +391,19 @@ document.getElementById("sidebar-overlay").addEventListener("click", () => {
 
 // init
 renderSidebar();
+
+// restore last-read chapter
+const saved = loadProgress();
+if (saved) {
+  const links = document.querySelectorAll(".ch-link");
+  for (const link of links) {
+    if (link.dataset.file === saved.file) {
+      link.classList.add("active");
+      loadChapter(saved.file, true).then(restoreScroll);
+      break;
+    }
+  }
+}
 </script>
 </body>
 </html>
